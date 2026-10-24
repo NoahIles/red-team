@@ -1,0 +1,168 @@
+# homelab-security — team manifest
+#
+# Single source of truth for the agent team. `build_skills.py` reads this to:
+#   1. vendor + flatten the upstream offensive-security skills into .claude/skills/
+#   2. generate one .claude/agents/<name>.md per enabled lane below
+#
+# Scoping is SOFT: each agent keeps the Skill tool and loads skill bodies on
+# demand (kept lean — only descriptions sit in context until a skill is used,
+# and each agent runs in its own context window). An agent's "lane" is the set
+# of skills named in its prompt; it is guidance, not a hard wall.
+
+upstream:
+  repo: https://github.com/SnailSploit/claude-red
+  # Pin to a commit for reproducible builds. Currently the tip of main.
+  # Change to "main" to always take latest (less reproducible).
+  ref: a8de813edc9f66f60d44cfe42d47750e89d9930b
+  skills_subdir: Skills
+
+# Defaults applied to every agent unless overridden per-agent.
+defaults:
+  model: sonnet
+  tools: [Read, Grep, Glob, Bash, WebFetch, WebSearch, Skill]
+
+# Skills every agent gets in its lane (small + always useful).
+shared_skills:
+  - offensive-reporting
+  - offensive-fast-checking
+
+# Shared authorization guardrail injected into every agent prompt.
+authorization: >
+  Operate ONLY against assets Noah owns or is explicitly authorized to test
+  (his homelab, his own public services and websites). Never touch third-party
+  or out-of-scope systems. Default to the least intrusive technique that answers
+  the question; do not run destructive, denial-of-service, or persistence
+  actions without an explicit, scoped go-ahead for that specific action. Record
+  findings with the offensive-reporting skill.
+
+agents:
+  - name: recon
+    enabled: true
+    description: >
+      Reconnaissance and attack-surface mapping of authorized targets (OSINT,
+      external footprinting). Use first, before deeper per-surface testing.
+    skills:
+      - offensive-osint
+      - offensive-osint-methodology
+
+  - name: web-app
+    enabled: true
+    description: >
+      Web application and API security testing on authorized targets — the
+      primary lane for Noah's public websites/services. OWASP-class bugs, logic
+      flaws, auth/token issues.
+    skills:
+      - offensive-business-logic
+      - offensive-deserialization
+      - offensive-file-upload
+      - offensive-graphql
+      - offensive-idor
+      - offensive-open-redirect
+      - offensive-parameter-pollution
+      - offensive-race-condition
+      - offensive-rce
+      - offensive-request-smuggling
+      - offensive-sqli
+      - offensive-ssrf
+      - offensive-ssti
+      - offensive-waf-bypass
+      - offensive-xss
+      - offensive-xxe
+      - offensive-api-abuse
+      - offensive-api-security
+      - offensive-jwt
+      - offensive-oauth
+
+  - name: cloud-infra
+    enabled: true
+    description: >
+      Cloud, container, Kubernetes, CI/CD and supply-chain security review of
+      authorized infrastructure. Use for hosting platform and pipeline posture.
+    skills:
+      - offensive-cloud
+      - offensive-container-escape
+      - offensive-k8s-attacks
+      - offensive-cicd-pipeline
+      - offensive-cicd-secrets
+      - offensive-dependency-confusion
+      - offensive-supply-chain
+
+  - name: network-wireless
+    enabled: true
+    description: >
+      Network-level and wireless (Wi-Fi / BLE / Zigbee / Z-Wave / LoRaWAN)
+      assessment of the authorized homelab perimeter and RF surface.
+    skills:
+      - offensive-network-attacks
+      - offensive-wifi-recon
+      - offensive-wifi
+      - offensive-wpa2-psk
+      - offensive-wpa3-sae
+      - offensive-wpa-enterprise
+      - offensive-wps
+      - offensive-deauth-disassoc
+      - offensive-evil-twin
+      - offensive-krack-fragattacks
+      - offensive-bluetooth-ble
+      - offensive-bluetooth-classic
+      - offensive-zigbee-thread-matter
+      - offensive-z-wave
+      - offensive-lorawan-sub-ghz
+
+  - name: appsec-research
+    enabled: true
+    description: >
+      Deeper application-security research: exploit development, fuzzing, crash
+      analysis, and crypto/TLS review. Use when a surface-level finding needs
+      root-cause or exploitability work.
+    skills:
+      - offensive-basic-exploitation
+      - offensive-crash-analysis
+      - offensive-exploit-development
+      - offensive-exploit-dev-course
+      - offensive-mitigations
+      - offensive-toctou
+      - offensive-bug-identification
+      - offensive-fuzzing
+      - offensive-fuzzing-course
+      - offensive-vuln-classes
+      - offensive-crypto-attacks
+      - offensive-tls-attacks
+
+  - name: specialist
+    enabled: true
+    description: >
+      Narrow surfaces that come up occasionally: mobile apps, IoT devices,
+      phishing/social-engineering simulation, and AI/LLM security.
+    skills:
+      - offensive-mobile
+      - offensive-iot
+      - offensive-phishing
+      - offensive-social-engineering
+      - offensive-ai-security
+
+  # PARKED pending the Windows/AD discussion (open question #3). Defined so the
+  # mapping is complete; enabled:false means build_skills.py skips it.
+  - name: internal-ad
+    enabled: false
+    description: >
+      Internal / post-compromise lane: Active Directory, privilege escalation,
+      lateral movement, persistence, EDR considerations, forensics. Enable once
+      the internal environment is scoped.
+    skills:
+      - offensive-active-directory
+      - offensive-netexec
+      - offensive-linux-privesc
+      - offensive-windows-privesc
+      - offensive-lateral-movement
+      - offensive-persistence
+      - offensive-data-exfiltration
+      - offensive-advanced-redteam
+      - offensive-edr-evasion
+      - offensive-initial-access
+      - offensive-keylogger-arch
+      - offensive-shellcode
+      - offensive-windows-boundaries
+      - offensive-windows-mitigations
+      - offensive-anti-forensics
+      - offensive-c2-frameworks

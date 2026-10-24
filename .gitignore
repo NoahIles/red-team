@@ -1,0 +1,9 @@
+# Flattened skills are VENDORED from upstream at build time — not committed.
+# build_skills.py regenerates them from manifest.yaml (pinned upstream ref).
+.claude/skills/
+
+# The agent files ARE committed (they are the team's real configuration):
+# !.claude/agents/   <- kept in git
+
+__pycache__/
+*.pyc
