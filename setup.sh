@@ -1,35 +1,34 @@
 #!/bin/bash
-# homelab-security — Claude Code cloud-session setup script.
+# red-team — Claude Code cloud-session setup script.
 #
-# Point your project's setup script at this (or paste its body). It:
-#   1. builds the flattened skills + generated agents from the manifest
-#   2. installs them into ~/.claude so every session in this environment
-#      discovers them regardless of working directory
+# Paste this into your Claude Code project's environment setup-script field
+# (Project settings → environment). It runs before each session and:
+#   1. clones (or updates) this repo
+#   2. builds the team: flattens the upstream skills + generates the agents
+#   3. installs skills AND agents into ~/.claude so every session discovers them
 #
-# Assumes this repo is already present (the cloud environment clones your
-# configured source repo before running setup). If you instead want setup to
-# clone it, uncomment the git clone block below.
+# Idempotent — safe to run on every session start.
 set -euo pipefail
 
-# --- locate the repo -------------------------------------------------------
-# If the environment already cloned this repo, set REPO to its path.
-REPO="${REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+REPO_DIR="${HOME}/red-team"
+REPO_URL="https://github.com/NoahIles/red-team"
 
-# To have setup clone it instead, uncomment and set the URL:
-# REPO="${HOME}/red-team"
-# [ -d "$REPO" ] || git clone --depth 1 https://github.com/NoahIles/red-team "$REPO"
+# 1. Get (or update) the team repo
+if [ -d "$REPO_DIR/.git" ]; then
+  git -C "$REPO_DIR" fetch --depth 1 origin main
+  git -C "$REPO_DIR" reset --hard origin/main
+else
+  git clone --depth 1 "$REPO_URL" "$REPO_DIR"
+fi
 
-# --- build -----------------------------------------------------------------
+# 2. Build: flatten upstream skills + generate agents from the manifest
 pip install --quiet pyyaml >/dev/null 2>&1 || true
-python3 "$REPO/build_skills.py" --all --target "$REPO/.claude"
+python3 "$REPO_DIR/build_skills.py" --all --target "$REPO_DIR/.claude"
 
-# --- install into ~/.claude (user scope, loads in every session) -----------
-mkdir -p "$HOME/.claude/skills" "$HOME/.claude/agents"
-# skills: copy each flattened skill up to the user skills root
-cp -r "$REPO/.claude/skills/." "$HOME/.claude/skills/"
-# agents: copy generated agent definitions
-cp -r "$REPO/.claude/agents/." "$HOME/.claude/agents/"
+# 3. Install into ~/.claude so every session discovers them
+rm -rf "${HOME}/.claude/skills/claude-red"   # drop the old non-working nested clone, if present
+mkdir -p "${HOME}/.claude/skills" "${HOME}/.claude/agents"
+cp -r "$REPO_DIR/.claude/skills/." "${HOME}/.claude/skills/"
+cp -r "$REPO_DIR/.claude/agents/." "${HOME}/.claude/agents/"
 
-echo "homelab-security installed:"
-echo "  skills: $(find "$HOME/.claude/skills" -name SKILL.md | wc -l | tr -d ' ')"
-echo "  agents: $(find "$HOME/.claude/agents" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')"
+echo "red-team installed: $(find "${HOME}/.claude/skills" -name SKILL.md | wc -l | tr -d ' ') skills, $(find "${HOME}/.claude/agents" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ') agents"

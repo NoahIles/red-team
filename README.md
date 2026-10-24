@@ -10,7 +10,7 @@ one manifest, so it's versioned, reviewable, and rebuildable from scratch.
 red-team/
 ├── manifest.yaml        # SINGLE SOURCE OF TRUTH: lanes → skills, upstream pin
 ├── build_skills.py      # generates the team from the manifest
-├── setup.sh             # cloud-session setup: build + install into ~/.claude
+├── setup.sh             # environment setup script: clone + build + install
 ├── .gitignore           # skills are vendored at build time, not committed
 └── .claude/
     ├── agents/          # GENERATED + committed — the team's real config
@@ -75,9 +75,31 @@ python3 build_skills.py --skills
 python3 build_skills.py --validate
 ```
 
-For a Claude Code cloud environment, point the project's setup script at
-`setup.sh` — it builds the team and installs it into `~/.claude` so it loads in
-every session.
+## Deploying to a Claude Code cloud environment
+
+The team only becomes active when the skills and agents are installed into
+`~/.claude` at session start. That's what [`setup.sh`](setup.sh) does — it is
+the project's **environment setup script**, not just a helper.
+
+**One-time wiring:** copy the contents of [`setup.sh`](setup.sh) into your
+Claude Code project's environment setup-script field (Project settings →
+environment), replacing any earlier skill-install script. From then on, every
+new session runs it automatically.
+
+On each session start it:
+
+1. **Clones or updates** this repo into `~/red-team` (fast-forwards to `main`).
+2. **Builds the team** — `build_skills.py --all` flattens the pinned upstream
+   skills into the one-level layout Claude Code discovers and regenerates the
+   agent files from `manifest.yaml`.
+3. **Installs** the flattened skills and the agent definitions into
+   `~/.claude/skills/` and `~/.claude/agents/`, and removes the old
+   non-discoverable `claude-red` clone if it's still around.
+
+It's idempotent, so re-running it every session is safe. After wiring it in,
+start a fresh session and the agents (`/agents` or by delegation) and the
+`offensive-*` skills should be available. Nothing loads in the *current*
+session — the install runs at startup, so it takes effect on the next one.
 
 ## Adding / changing agents
 
